@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<instance>
+    <info>
+        <dataset>simple</dataset>
+        <n>VRPSTW_6nodes</n>
+    </info>
+    <network>
+        <nodes>
+            <node id="0" type="0">
+                <cx>40.0</cx>
+                <cy>50.0</cy>
+            </node>
+            <node id="1" type="1">
+                <cx>45.0</cx>
+                <cy>68.0</cy>
+            </node>
+            <node id="2" type="1">
+                <cx>30.0</cx>
+                <cy>50.0</cy>
+            </node>
+            <node id="3" type="1">
+                <cx>25.0</cx>
+                <cy>85.0</cy>
+            </node>
+            <node id="4" type="1">
+                <cx>15.0</cx>
+                <cy>75.0</cy>
+            </node>
+            <node id="5" type="1">
+                <cx>10.0</cx>
+                <cy>40.0</cy>
+            </node>
+            <node id="6" type="1">
+                <cx>35.0</cx>
+                <cy>30.0</cy>
+            </node>
+        </nodes>
+        <euclidean/>
+        <decimals>0</decimals>
+    </network>
+    <fleet>
+        <vehicle_profile type="0" number="2">
+            <departure_node>0</departure_node>
+            <arrival_node>0</arrival_node>
+            <capacity>200.0</capacity>
+            <max_travel_time>1236.0</max_travel_time>
+        </vehicle_profile>
+    </fleet>
+    <requests>
+        <request id="1" node="1">
+            <tw>
+                <start>100</start>
+                <end>200</end>
+            </tw>
+            <quantity>20.0</quantity>
+            <service_time>90.0</service_time>
+        </request>
+        <request id="2" node="2">
+            <tw>
+                <start>150</start>
+                <end>250</end>
+            </tw>
+            <quantity>30.0</quantity>
+            <service_time>90.0</service_time>
+        </request>
+        <request id="3" node="3">
+            <tw>
+                <start>200</start>
+                <end>300</end>
+            </tw>
+            <quantity>40.0</quantity>
+            <service_time>90.0</service_time>
+        </request>
+        <request id="4" node="4">
+            <tw>
+                <start>250</start>
+                <end>350</end>
+            </tw>
+            <quantity>20.0</quantity>
+            <service_time>90.0</service_time>
+        </request>
+        <request id="5" node="5">
+            <tw>
+                <start>300</start>
+                <end>400</end>
+            </tw>
+            <quantity>30.0</quantity>
+            <service_time>90.0</service_time>
+        </request>
+        <request id="6" node="6">
+            <tw>
+                <start>350</start>
+                <end>450</end>
+            </tw>
+            <quantity>10.0</quantity>
+            <service_time>90.0</service_time>
+        </request>
+    </requests>
+</instance>
