@@ -91,8 +91,8 @@ def solve_simple_test():
     solve_and_save("./dataset/simple/TW10.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW10-TPD1.0")
     solve_and_save("./dataset/simple/TW60.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW60-TPD0.5")
     solve_and_save("./dataset/simple/TW60.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW60-TPD1.0")
-    solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW60-TPD0.5")
-    solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW60-TPD1.0")
+    solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 0.5, 10, 20, 1e6, 3600, "VRPSTW6-TPD0.5")
+    solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 1.0, 10, 20, 1e6, 3600, "VRPSTW6-TPD1.0")
 
 
 if __name__ == "__main__":
