@@ -14,7 +14,7 @@ def load_dataset(xmlpath: str):
 
     assume node 0 is the depot in the xml file
 
-    return: coordinate, time_window, demand, service_duration, vehicle_quantity, vehicle_capacity
+    return: coordinate, time_window, demand, service_duration, vehicle_quantity, vehicle_capacity, premium_customers
 
     """
     
@@ -39,6 +39,8 @@ def load_dataset(xmlpath: str):
     time_window = np.zeros([1, 2])
     demand = np.array(0)
     service_duration = np.array(0)
+    premium_customers = np.zeros(1, dtype=bool)  # Initialize premium_customers array
+    
     for request in root.iter("request"):
         time_window = np.vstack((
             time_window,
@@ -46,15 +48,23 @@ def load_dataset(xmlpath: str):
         ))
         demand = np.append(demand, float(request.find("quantity").text))
         service_duration = np.append(service_duration, float(request.find("service_time").text))
+        
+        # Check if premium attribute exists, default to False if not present
+        is_premium = False
+        if request.get("premium") is not None:
+            is_premium = request.get("premium").lower() == "true"
+        premium_customers = np.append(premium_customers, is_premium)
+        
     time_window = np.vstack((time_window, np.array([0, float(root.find("fleet").find("vehicle_profile").find("max_travel_time").text)])))
     demand = np.append(demand, 0)
     service_duration = np.append(service_duration, 0)
+    premium_customers = np.append(premium_customers, False)  # Depot is not a premium customer
     
     vehicle_quantity = int(root.find("fleet").find("vehicle_profile").get("number"))
 
     vehicle_capacity = float(root.find("fleet").find("vehicle_profile").find("capacity").text)
 
-    return coordinate, time_window, demand, service_duration, vehicle_quantity, vehicle_capacity
+    return coordinate, time_window, demand, service_duration, vehicle_quantity, vehicle_capacity, premium_customers
 
 
 def save_raw_result(
@@ -72,7 +82,8 @@ def save_raw_result(
     cost_per_distance: float,
     time_per_distance: float,
     solver_runtime: float,
-    mip_gap: float
+    mip_gap: float,
+    premium_customers=None
 ):
 
     node_quantity = coordinate.shape[0]
@@ -117,6 +128,11 @@ def save_raw_result(
 
     for i in N:
         print(service_duration[i], file=f)
+        
+    # Save premium customer information if available
+    if premium_customers is not None:
+        for i in N:
+            print(premium_customers[i], file=f)
 
     f.close()
         
@@ -173,10 +189,20 @@ def load_raw_result(txtpath: str):
     service_duration = np.zeros(node_quantity)
     for i in N:
         service_duration[i] = f.readline()
+        
+    # Try to load premium customer information if available
+    premium_customers = None
+    try:
+        premium_customers = np.zeros(node_quantity, dtype=bool)
+        for i in N:
+            premium_customers[i] = f.readline().strip("\n") == "True"
+    except:
+        # Premium customer information not available in this file
+        pass
 
     f.close()
 
-    return name, is_feasible, objective_value, arc, arrival_time, coordinate, time_window, demand, service_duration, vehicle_quantity, vehicle_capacity, cost_per_distance, time_per_distance, solver_runtime, mip_gap
+    return name, is_feasible, objective_value, arc, arrival_time, coordinate, time_window, demand, service_duration, vehicle_quantity, vehicle_capacity, cost_per_distance, time_per_distance, solver_runtime, mip_gap, premium_customers
 
 
 def pretty_print(
@@ -191,6 +217,7 @@ def pretty_print(
     solver_runtime: float,
     chrono_info: list,
     mip_gap: float,
+    premium_customers=None
 ):
 
     V = range(vehicle_quantity)
@@ -212,22 +239,48 @@ def pretty_print(
         print("objective function value:", objective_value, file=f)
         print("MIP gap:", mip_gap, file=f)
         print("====================================================================================", file=f)
-        print("{:<13} {:<13} {:<13} {:<13} {:<13} {:<13}".format("|vehicle no.", "|time", "|node no.", "|cargo", "|X", "|Y"), file=f)
+        
+        # Add premium customer information to header if available
+        if premium_customers is not None:
+            print("{:<13} {:<13} {:<13} {:<13} {:<13} {:<13} {:<13}".format(
+                "|vehicle no.", "|time", "|node no.", "|cargo", "|X", "|Y", "|premium"), file=f)
+        else:
+            print("{:<13} {:<13} {:<13} {:<13} {:<13} {:<13}".format(
+                "|vehicle no.", "|time", "|node no.", "|cargo", "|X", "|Y"), file=f)
+            
         print("------------------------------------------------------------------------------------", file=f)
         for k in V:
             if(chrono_info[k].shape[0] > 2):
                 for i in range(chrono_info[k].shape[0]):
-                    print(
-                        "{:<13} {:<13} {:<13} {:<13} {:<13} {:<13}".format(
-                            "|" + str(k),
-                            "|" + str(round(chrono_info[k][i, 0], 3)),
-                            "|" + str(int(chrono_info[k][i, 1])),
-                            "|" + str(chrono_info[k][i, 2]),
-                            "|" + str(chrono_info[k][i, 3]),
-                            "|" + str(chrono_info[k][i, 4])
-                        ),
-                        file=f
-                    )
+                    node_num = int(chrono_info[k][i, 1])
+                    
+                    # Include premium status in output if available
+                    if premium_customers is not None and node_num < len(premium_customers):
+                        premium_status = "Yes" if premium_customers[node_num] else "No"
+                        print(
+                            "{:<13} {:<13} {:<13} {:<13} {:<13} {:<13} {:<13}".format(
+                                "|" + str(k),
+                                "|" + str(round(chrono_info[k][i, 0], 3)),
+                                "|" + str(node_num),
+                                "|" + str(chrono_info[k][i, 2]),
+                                "|" + str(chrono_info[k][i, 3]),
+                                "|" + str(chrono_info[k][i, 4]),
+                                "|" + premium_status
+                            ),
+                            file=f
+                        )
+                    else:
+                        print(
+                            "{:<13} {:<13} {:<13} {:<13} {:<13} {:<13}".format(
+                                "|" + str(k),
+                                "|" + str(round(chrono_info[k][i, 0], 3)),
+                                "|" + str(node_num),
+                                "|" + str(chrono_info[k][i, 2]),
+                                "|" + str(chrono_info[k][i, 3]),
+                                "|" + str(chrono_info[k][i, 4])
+                            ),
+                            file=f
+                        )
                 print("------------------------------------------------------------------------------------", file=f)
     
     f.close()
@@ -495,95 +548,44 @@ def save_result_comparison():
     result_survey_size = {
         "25": survey_results(all_25, True),
         "50": survey_results(all_50, True),
-        "100": survey_results(all_100, True),
+        "100": survey_results(all_100, True)
     }
-    result_survey_size_count = np.array([
-        survey_results(all_25, False),
-        survey_results(all_50, False),
-        survey_results(all_100, False)
-    ])
-    result_survey_size_norm = np.array([
-        survey_results(all_25, True),
-        survey_results(all_50, True),
-        survey_results(all_100, True)
-    ])
 
-    result_survey_data_count = np.array([
-        survey_results(np.hstack((v_c1, v_num_c1, d_c1, dist_c1, g_c1, t_c1)), False),
-        survey_results(np.hstack((v_c2, v_num_c2, d_c2, dist_c2, g_c2, t_c2)), False),
-        survey_results(np.hstack((v_r1, v_num_r1, d_r1, dist_r1, g_r1, t_r1)), False),
-        survey_results(np.hstack((v_r2, v_num_r2, d_r2, dist_r2, g_r2, t_r2)), False),
-        survey_results(np.hstack((v_rc1, v_num_rc1, d_rc1, dist_rc1, g_rc1, t_rc1)), False),
-        survey_results(np.hstack((v_rc2, v_num_rc2, d_rc2, dist_rc2, g_rc2, t_rc2)), False)
-    ])
-
-    result_survey_data_norm = np.array([
-        survey_results(np.hstack((v_c1, v_num_c1, d_c1, dist_c1, g_c1, t_c1)), True),
-        survey_results(np.hstack((v_c2, v_num_c2, d_c2, dist_c2, g_c2, t_c2)), True),
-        survey_results(np.hstack((v_r1, v_num_r1, d_r1, dist_r1, g_r1, t_r1)), True),
-        survey_results(np.hstack((v_r2, v_num_r2, d_r2, dist_r2, g_r2, t_r2)), True),
-        survey_results(np.hstack((v_rc1, v_num_rc1, d_rc1, dist_rc1, g_rc1, t_rc1)), True),
-        survey_results(np.hstack((v_rc2, v_num_rc2, d_rc2, dist_rc2, g_rc2, t_rc2)), True)
-    ])
-
-    table_header = ["Problem", "V.", "V. (S)", "Dist.", "Dist. (S)", "MIP Gap", "Solver Runtime"]
     if(not os.path.exists("./result")):
         os.mkdir("result")
-    f = open("./result/comparision.txt", "w")
-
-    print("=========================================================================================================", file=f)
-    print(tabulate(table_c1, table_header), file=f)
-    print('\n', file=f)
-    print(tabulate(table_c1, table_header, tablefmt="latex"), file=f)
-    print('\n', file=f)
-
-    print("=========================================================================================================", file=f)
-    print(tabulate(table_c2, table_header), file=f)
-    print('\n', file=f)
-    print(tabulate(table_c2, table_header, tablefmt="latex"), file=f)
-    print('\n', file=f)
-
-    print("=========================================================================================================", file=f)
-    print(tabulate(table_r1, table_header), file=f)
-    print('\n', file=f)
-    print(tabulate(table_r1, table_header, tablefmt="latex"), file=f)
-    print('\n', file=f)
-
-    print("=========================================================================================================", file=f)
-    print(tabulate(table_r2, table_header), file=f)
-    print('\n', file=f)
-    print(tabulate(table_r2, table_header, tablefmt="latex"), file=f)
-    print('\n', file=f)
-
-    print("=========================================================================================================", file=f)
-    print(tabulate(table_rc1, table_header), file=f)
-    print('\n', file=f)
-    print(tabulate(table_rc1, table_header, tablefmt="latex"), file=f)
-    print('\n', file=f)
-
-    print("=========================================================================================================", file=f)
-    print(tabulate(table_rc2, table_header), file=f)
-    print('\n', file=f)
-    print(tabulate(table_rc2, table_header, tablefmt="latex"), file=f)
-    print('\n', file=f)
-
-    print("=========================================================================================================", file=f)
-    print(tabulate(np.array(result_survey_data_count), category_names), file=f)
-    print('\n', file=f)
-    print(tabulate(np.array(result_survey_data_count), category_names, tablefmt="latex"), file=f)
-    print('\n', file=f)
-    print(tabulate(np.array(result_survey_data_norm), category_names), file=f)
-    print('\n', file=f)
-    print(tabulate(np.array(result_survey_data_norm), category_names, tablefmt="latex"), file=f)
-    print('\n', file=f)
-    print(tabulate(np.array(result_survey_size_count), category_names), file=f)
-    print('\n', file=f)
-    print(tabulate(np.array(result_survey_size_count), category_names, tablefmt="latex"), file=f)
-    print('\n', file=f)
-    print(tabulate(np.array(result_survey_size_norm), category_names), file=f)
-    print('\n', file=f)
-    print(tabulate(np.array(result_survey_size_norm), category_names, tablefmt="latex"), file=f)
-    print('\n', file=f)
-    
-
-    return result_survey, result_survey_size, category_names
+    f = open("./result/comparison.txt", "w")
+    print("====================================================================================", file=f)
+    print("Comparison with SOTA 2005", file=f)
+    print("====================================================================================", file=f)
+    print("C1", file=f)
+    print(tabulate(table_c1, headers=["name", "v", "v*", "d", "d*", "gap", "t"]), file=f)
+    print("C2", file=f)
+    print(tabulate(table_c2, headers=["name", "v", "v*", "d", "d*", "gap", "t"]), file=f)
+    print("R1", file=f)
+    print(tabulate(table_r1, headers=["name", "v", "v*", "d", "d*", "gap", "t"]), file=f)
+    print("R2", file=f)
+    print(tabulate(table_r2, headers=["name", "v", "v*", "d", "d*", "gap", "t"]), file=f)
+    print("RC1", file=f)
+    print(tabulate(table_rc1, headers=["name", "v", "v*", "d", "d*", "gap", "t"]), file=f)
+    print("RC2", file=f)
+    print(tabulate(table_rc2, headers=["name", "v", "v*", "d", "d*", "gap", "t"]), file=f)
+    print("====================================================================================", file=f)
+    print("Result survey", file=f)
+    print("====================================================================================", file=f)
+    print(tabulate(np.array([
+        result_survey["C1"],
+        result_survey["C2"],
+        result_survey["R1"],
+        result_survey["R2"],
+        result_survey["RC1"],
+        result_survey["RC2"]
+    ]), headers=category_names, showindex=["C1", "C2", "R1", "R2", "RC1", "RC2"]), file=f)
+    print("====================================================================================", file=f)
+    print("Result survey by size", file=f)
+    print("====================================================================================", file=f)
+    print(tabulate(np.array([
+        result_survey_size["25"],
+        result_survey_size["50"],
+        result_survey_size["100"]
+    ]), headers=category_names, showindex=["25", "50", "100"]), file=f)
+    f.close()

@@ -47,7 +47,7 @@
         </vehicle_profile>
     </fleet>
     <requests>
-        <request id="1" node="1">
+        <request id="1" node="1" premium="true">
             <tw>
                 <start>100</start>
                 <end>50</end>
@@ -55,7 +55,7 @@
             <quantity>20.0</quantity>
             <service_time>90.0</service_time>
         </request>
-        <request id="2" node="2">
+        <request id="2" node="2" premium="true">
             <tw>
                 <start>0</start>
                 <end>50</end>
@@ -63,7 +63,7 @@
             <quantity>30.0</quantity>
             <service_time>90.0</service_time>
         </request>
-        <request id="3" node="3">
+        <request id="3" node="3" premium="false">
             <tw>
                 <start>200</start>
                 <end>300</end>
@@ -71,7 +71,7 @@
             <quantity>40.0</quantity>
             <service_time>90.0</service_time>
         </request>
-        <request id="4" node="4">
+        <request id="4" node="4" premium="false">
             <tw>
                 <start>250</start>
                 <end>350</end>
@@ -79,7 +79,7 @@
             <quantity>20.0</quantity>
             <service_time>90.0</service_time>
         </request>
-        <request id="5" node="5">
+        <request id="5" node="5" premium="false">
             <tw>
                 <start>300</start>
                 <end>400</end>
@@ -87,7 +87,7 @@
             <quantity>30.0</quantity>
             <service_time>90.0</service_time>
         </request>
-        <request id="6" node="6">
+        <request id="6" node="6" premium="false">
             <tw>
                 <start>350</start>
                 <end>450</end>

@@ -1,6 +1,7 @@
 import os
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import numpy as np
 
 from fileutil import pretty_print
@@ -22,7 +23,8 @@ def plot_solution(
     time_per_distance: float,
     solver_runtime: float,
     mip_gap: float,
-    show_plot: bool
+    show_plot: bool,
+    premium_customers=None
 ):
     """
     if the problem is feasible, plot all the results
@@ -36,8 +38,12 @@ def plot_solution(
     node_quantity = coordinate.shape[0]
     customer_quantity = node_quantity - 2
     N = range(node_quantity)
+    C = range(1, customer_quantity + 1)
     V = range(vehicle_quantity)
 
+    # If premium_customers is not provided, create a default array with all customers as non-premium
+    if premium_customers is None:
+        premium_customers = np.zeros(node_quantity, dtype=bool)
     
     px = 1/plt.rcParams['figure.dpi']
     plt.figure(title, figsize=(2700/1.75*px, 900/1.75*px))
@@ -134,12 +140,30 @@ def plot_solution(
         time_per_distance,
         solver_runtime,
         chrono_info,
-        mip_gap
+        mip_gap,
+        premium_customers
     )
 
-
     plt.subplot(1, 3, 1)
-    plt.plot(coordinate[0, 0], coordinate[0, 1], marker="o", color='0.5', markersize=10)
+    # Plot depot
+    plt.plot(coordinate[0, 0], coordinate[0, 1], marker="o", color='black', markersize=10)
+    
+    # Highlight premium customers with different colors
+    if premium_customers is not None:
+        for i in C:
+            if premium_customers[i]:
+                plt.plot(coordinate[i, 0], coordinate[i, 1], marker="o", color='red', markersize=8)
+                plt.annotate(f"{i} (P)", (coordinate[i, 0], coordinate[i, 1]), xytext=(5, 5), textcoords='offset points')
+            else:
+                plt.plot(coordinate[i, 0], coordinate[i, 1], marker="o", color='blue', markersize=8)
+                plt.annotate(f"{i}", (coordinate[i, 0], coordinate[i, 1]), xytext=(5, 5), textcoords='offset points')
+        
+        # Add legend for premium and non-premium customers
+        premium_patch = mpatches.Patch(color='red', label='Premium Customer')
+        non_premium_patch = mpatches.Patch(color='blue', label='Non-Premium Customer')
+        depot_patch = mpatches.Patch(color='black', label='Depot')
+        plt.legend(handles=[premium_patch, non_premium_patch, depot_patch], loc="upper right")
+    
     plt.grid(True)
     plt.xlabel("X", fontsize=16)
     plt.ylabel("Y", fontsize=16)
@@ -166,6 +190,43 @@ def plot_solution(
 
     if(show_plot):
         plt.show()
+
+
+def plot_solution_premium(
+    title: str,
+    is_feasible: bool,
+    objective_value: float,
+    arc: np.ndarray,
+    arrival_time: np.ndarray,
+    coordinate: np.ndarray,
+    time_window: np.ndarray,
+    demand: np.ndarray,
+    service_duration: np.ndarray,
+    vehicle_quantity: int,
+    vehicle_capacity: float,
+    cost_per_distance: float,
+    time_per_distance: float,
+    solver_runtime: float,
+    mip_gap: float,
+    premium_customers: np.ndarray,
+    show_plot: bool
+):
+    """
+    Modified version of plot_solution that highlights premium customers
+    """
+    # Call the updated plot_solution function with premium_customers parameter
+    plot_solution(
+        title, is_feasible, objective_value, arc, arrival_time, coordinate, 
+        time_window, demand, service_duration, vehicle_quantity, vehicle_capacity, 
+        cost_per_distance, time_per_distance, solver_runtime, mip_gap, 
+        show_plot, premium_customers
+    )
+    
+    # Save an additional premium-specific plot
+    if is_feasible and not os.path.exists("./result"):
+        os.mkdir("result")
+    if is_feasible:
+        plt.savefig(f"./result/plot-{title}-premium.png")
 
 
 def plot_survey(results, category_names, file_type, height):

@@ -7,8 +7,8 @@ from visual import plot_solution, plot_survey
 
 def load_and_plot(txtpath: str, show=True):
     
-    name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, cpd, tpd, runtime, gap = load_raw_result(txtpath)  
-    plot_solution(name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, cpd, tpd, runtime, gap, show)
+    name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, cpd, tpd, runtime, gap, premium_customers = load_raw_result(txtpath)  
+    plot_solution(name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, cpd, tpd, runtime, gap, show, premium_customers)
 
 
 if __name__ == "__main__":
