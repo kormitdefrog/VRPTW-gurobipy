@@ -1,5 +1,6 @@
 import numpy as np
 from gurobipy import GRB, Model, quicksum
+import math
 
 
 def solve_VRPTW(
@@ -14,7 +15,8 @@ def solve_VRPTW(
     early_penalty_weight: np.ndarray,
     late_penalty_weight: np.ndarray,
     big_m: float,
-    timelimit: float
+    timelimit: float,
+    vehicle_ratings: np.ndarray # New parameter for vehicle ratings
 ):
     """
     node quantity = customer quantity + 2 = n + 2
@@ -34,6 +36,25 @@ def solve_VRPTW(
     N = range(node_quantity)
     C = range(1, customer_quantity + 1)
     V = range(vehicle_quantity)
+
+    # Calculate vehicle usage probability based on rating
+    vehicle_usage_probability = np.zeros(vehicle_quantity)
+    for k in V:
+        x_rating = vehicle_ratings[k]
+        vehicle_usage_probability[k] = 0.2 + (0.8 - 0.2) * (1 / (1 + math.exp(-2 * (x_rating - 4))))
+    
+    # Define a base cost for using a vehicle, to be scaled by probability
+    # This base cost should be significant enough to influence vehicle selection
+    base_vehicle_use_cost = 1000.0 # Example value, can be tuned
+
+    # Calculate vehicle use cost based on probability (lower probability = higher cost)
+    vehicle_use_cost = np.zeros(vehicle_quantity)
+    for k in V:
+        # Avoid division by zero or very small numbers if probability is extremely low
+        if vehicle_usage_probability[k] > 0.001:
+            vehicle_use_cost[k] = base_vehicle_use_cost / vehicle_usage_probability[k]
+        else:
+            vehicle_use_cost[k] = big_m # Assign a very high cost if probability is near zero
 
     # calculate traveling distance and time from node to node
     distance = np.zeros([node_quantity, node_quantity])
@@ -62,7 +83,8 @@ def solve_VRPTW(
     model.setObjective(
         quicksum(x[i, j, k] * distance[i, j] * cost_per_distance for i in N for j in N for k in V) +
         quicksum(early_penalty_weight[i] * e[i] for i in C) +
-        quicksum(late_penalty_weight[i] * l[i] for i in C)
+        quicksum(late_penalty_weight[i] * l[i] for i in C) +
+        quicksum(vehicle_use_cost[k] * quicksum(x[0, j, k] for j in N) for k in V) # New term for vehicle usage cost
     )
     
     # Constraints
@@ -120,6 +142,7 @@ def solve_VRPTW(
     result_arrival_time = np.zeros([node_quantity, vehicle_quantity])
     result_early_deviation = np.zeros(node_quantity)
     result_late_deviation = np.zeros(node_quantity)
+    result_late_deviation_per_vehicle = np.zeros(vehicle_quantity) # New: late deviation per vehicle
 
     for k in V:
         for i in N:
@@ -146,10 +169,23 @@ def solve_VRPTW(
             is_feasible = False
             break
 
+    # Calculate late deviation per vehicle
+    if is_feasible:
+        for k in V:
+            for i in C: # Iterate over customers
+                try:
+                    if y[i, k].X > 0.5: # If vehicle k visits customer i
+                        result_late_deviation_per_vehicle[k] += l[i].X
+                except:
+                    is_feasible = False
+                    break
+
     try:
         obj = model.getObjective().getValue()
         mip_gap = model.MIPGap
     except:
         is_feasible = False
 
-    return is_feasible, obj, result_arc, result_arrival_time, result_early_deviation, result_late_deviation, runtime, mip_gap
+    return is_feasible, obj, result_arc, result_arrival_time, result_early_deviation, result_late_deviation, result_late_deviation_per_vehicle, runtime, mip_gap
+
+

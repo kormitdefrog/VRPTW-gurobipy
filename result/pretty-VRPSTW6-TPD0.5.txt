@@ -7,8 +7,8 @@ cost per distance: 1
 time per distance: 0.5
 ====================================================================================
 feasible: True
-solver runtime: 0.04399991035461426
-objective function value: 9674.3298578109
+solver runtime: 0.051000118255615234
+objective function value: 8040.222189940442
 MIP gap: 0.0
 ====================================================================================
 |vehicle no.  |time         |node no.     |cargo        |X            |Y           

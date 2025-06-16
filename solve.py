@@ -4,7 +4,7 @@ from visual import plot_solution
 import numpy as np
 
 
-def solve_and_save(xmlpath: str, cpd: float, tpd: float, early_weight: float, late_weight: float, big_m: float, tlimit: float, name: str):
+def solve_and_save(xmlpath: str, cpd: float, tpd: float, early_weight: float, late_weight: float, big_m: float, tlimit: float, name: str, vehicle_ratings: np.ndarray):
 
     coord, tw, d, service_dur, v_quant, v_cap = load_dataset(xmlpath)
 
@@ -21,10 +21,10 @@ def solve_and_save(xmlpath: str, cpd: float, tpd: float, early_weight: float, la
         early_penalty_weight[i] = early_weight
         late_penalty_weight[i] = late_weight
 
-    is_feasible, obj, arc, time, early_dev, late_dev, runtime, gap = solve_VRPTW(
+    is_feasible, obj, arc, time, early_dev, late_dev, late_dev_per_vehicle, runtime, gap = solve_VRPTW(
         coord, tw, d, service_dur, v_quant, v_cap, 
         cpd, tpd, early_penalty_weight, late_penalty_weight,
-        big_m, tlimit
+        big_m, tlimit, vehicle_ratings
     )
 
     save_raw_result(name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, cpd, tpd, runtime, gap)
@@ -62,6 +62,16 @@ def solve_and_save(xmlpath: str, cpd: float, tpd: float, early_weight: float, la
         if not violations_found:
             print("  No time window violations found.")
 
+        # Apply lateness penalty to vehicle ratings
+        print(f"\nApplying lateness penalties for {name}:")
+        updated_vehicle_ratings = np.copy(vehicle_ratings)
+        for k in range(v_quant):
+            if late_dev_per_vehicle[k] > 0:
+                updated_vehicle_ratings[k] = max(1.0, updated_vehicle_ratings[k] - 0.1) # Ensure rating doesn\'t go below 1
+                print(f"  Vehicle {k} was late. Old rating: {vehicle_ratings[k]:.1f}, New rating: {updated_vehicle_ratings[k]:.1f}")
+        return updated_vehicle_ratings
+    return vehicle_ratings # Return original ratings if not feasible
+
 def solve_solomon(setname: str, cpd: float, tpd: float, early_weight: float, late_weight: float, big_m: float, tlimit: float, start: int, end: int):
 
     I = range(start, end + 1)
@@ -69,38 +79,62 @@ def solve_solomon(setname: str, cpd: float, tpd: float, early_weight: float, lat
         print("======================================================")
         print(setname, i)
         print("======================================================")
+        
+        # Dynamically determine vehicle quantity and initialize ratings
+        # Load a dummy dataset to get v_quant, then re-load for actual solve_and_save
+        # This is a workaround since load_dataset is called inside solve_and_save
+        # A better approach would be to refactor load_dataset to return v_quant separately
+        # For now, let\'s load the dataset once to get v_quant
+        if i < 10:
+            xmlpath_25_dummy = "./dataset/solomon-1987-" + setname + "/" + setname.upper() + "0" + str(i) + "_025.xml"
+        else:
+            xmlpath_25_dummy = "./dataset/solomon-1987-" + setname + "/" + setname.upper() + str(i) + "_025.xml"
+        
+        _, _, _, _, v_quant_dummy, _ = load_dataset(xmlpath_25_dummy)
+        initial_vehicle_ratings = np.full(v_quant_dummy, 3.0) # Initialize all vehicles to rating 3.0
+
         if i < 10:
             xmlpath_25 = "./dataset/solomon-1987-" + setname + "/" + setname.upper() + "0" + str(i) + "_025.xml"
             xmlpath_50 = "./dataset/solomon-1987-" + setname + "/" + setname.upper() + "0" + str(i) + "_050.xml"
             xmlpath_100 = "./dataset/solomon-1987-" + setname + "/" + setname.upper() + "0" + str(i) + "_100.xml"
-            solve_and_save(xmlpath_25, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + "0" + str(i) + "_025")
-            solve_and_save(xmlpath_50, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + "0" + str(i) + "_050")
-            solve_and_save(xmlpath_100, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + "0" + str(i) + "_100")
+            
+            # Pass and update vehicle ratings
+            initial_vehicle_ratings = solve_and_save(xmlpath_25, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + "0" + str(i) + "_025", initial_vehicle_ratings)
+            initial_vehicle_ratings = solve_and_save(xmlpath_50, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + "0" + str(i) + "_050", initial_vehicle_ratings)
+            initial_vehicle_ratings = solve_and_save(xmlpath_100, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + "0" + str(i) + "_100", initial_vehicle_ratings)
         else:
             xmlpath_25 = "./dataset/solomon-1987-" + setname + "/" + setname.upper() + str(i) + "_025.xml"
             xmlpath_50 = "./dataset/solomon-1987-" + setname + "/" + setname.upper() + str(i) + "_050.xml"
             xmlpath_100 = "./dataset/solomon-1987-" + setname + "/" + setname.upper() + str(i) + "_100.xml"
-            solve_and_save(xmlpath_25, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + str(i) + "_025")
-            solve_and_save(xmlpath_50, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + str(i) + "_050")
-            solve_and_save(xmlpath_100, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + str(i) + "_100")
+            
+            # Pass and update vehicle ratings
+            initial_vehicle_ratings = solve_and_save(xmlpath_25, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + str(i) + "_025", initial_vehicle_ratings)
+            initial_vehicle_ratings = solve_and_save(xmlpath_50, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + str(i) + "_050", initial_vehicle_ratings)
+            initial_vehicle_ratings = solve_and_save(xmlpath_100, cpd, tpd, early_weight, late_weight, big_m, tlimit, setname.upper() + str(i) + "_100", initial_vehicle_ratings)
 
 
 def solve_simple_test():
 
-    solve_and_save("./dataset/simple/TW10.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW10-TPD0.5")
-    solve_and_save("./dataset/simple/TW10.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW10-TPD1.0")
-    solve_and_save("./dataset/simple/TW60.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW60-TPD0.5")
-    solve_and_save("./dataset/simple/TW60.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW60-TPD1.0")
-    solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 0.5, 10, 20, 1e6, 3600, "VRPSTW6-TPD0.5")
-    solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 1.0, 10, 20, 1e6, 3600, "VRPSTW6-TPD1.0")
+    # Dynamically determine vehicle quantity and initialize ratings
+    _, _, _, _, v_quant_dummy, _ = load_dataset("./dataset/simple/TW10.xml") # Use one of the simple datasets to get v_quant
+    initial_vehicle_ratings = np.full(v_quant_dummy, 3.0) # Initialize all vehicles to rating 3.0
+
+    initial_vehicle_ratings = solve_and_save("./dataset/simple/TW10.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW10-TPD0.5", initial_vehicle_ratings)
+    initial_vehicle_ratings = solve_and_save("./dataset/simple/TW10.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW10-TPD1.0", initial_vehicle_ratings)
+    initial_vehicle_ratings = solve_and_save("./dataset/simple/TW60.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW60-TPD0.5", initial_vehicle_ratings)
+    initial_vehicle_ratings = solve_and_save("./dataset/simple/TW60.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW60-TPD1.0", initial_vehicle_ratings)
+    initial_vehicle_ratings = solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 0.5, 10, 20, 1e6, 3600, "VRPSTW6-TPD0.5", initial_vehicle_ratings)
+    initial_vehicle_ratings = solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 1.0, 10, 20, 1e6, 3600, "VRPSTW6-TPD1.0", initial_vehicle_ratings)
 
 
 if __name__ == "__main__":
 
     solve_simple_test()
-    solve_solomon("c1", 1, 1, 10, 20, 1e6, 3600, 1, 9)
-    solve_solomon("c2", 1, 1, 10, 20, 1e6, 3600, 1, 8)
-    solve_solomon("r1", 1, 1, 10, 20, 1e6, 3600, 1, 12)
-    solve_solomon("r2", 1, 1, 10, 20, 1e6, 3600, 1, 11)
-    solve_solomon("rc1", 1, 1, 10, 20, 1e6, 3600, 1, 3)
-    solve_solomon("rc2", 1, 1, 10, 20, 1e6, 3600, 1, 8)
+    # solve_solomon("c1", 1, 1, 10, 20, 1e6, 3600, 1, 9)
+    # solve_solomon("c2", 1, 1, 10, 20, 1e6, 3600, 1, 8)
+    # solve_solomon("r1", 1, 1, 10, 20, 1e6, 3600, 1, 12)
+    # solve_solomon("r2", 1, 1, 10, 20, 1e6, 3600, 1, 11)
+    # solve_solomon("rc1", 1, 1, 10, 20, 1e6, 3600, 1, 3)
+    # solve_solomon("rc2", 1, 1, 10, 20, 1e6, 3600, 1, 8)
+
+
