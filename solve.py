@@ -119,10 +119,10 @@ def solve_simple_test():
     _, _, _, _, v_quant_dummy, _ = load_dataset("./dataset/simple/TW10.xml") # Use one of the simple datasets to get v_quant
     initial_vehicle_ratings = np.full(v_quant_dummy, 3.0) # Initialize all vehicles to rating 3.0
 
-    initial_vehicle_ratings = solve_and_save("./dataset/simple/TW10.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW10-TPD0.5", initial_vehicle_ratings)
-    initial_vehicle_ratings = solve_and_save("./dataset/simple/TW10.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW10-TPD1.0", initial_vehicle_ratings)
-    initial_vehicle_ratings = solve_and_save("./dataset/simple/TW60.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW60-TPD0.5", initial_vehicle_ratings)
-    initial_vehicle_ratings = solve_and_save("./dataset/simple/TW60.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW60-TPD1.0", initial_vehicle_ratings)
+    # initial_vehicle_ratings = solve_and_save("./dataset/simple/TW10.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW10-TPD0.5", initial_vehicle_ratings)
+    # initial_vehicle_ratings = solve_and_save("./dataset/simple/TW10.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW10-TPD1.0", initial_vehicle_ratings)
+    # initial_vehicle_ratings = solve_and_save("./dataset/simple/TW60.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW60-TPD0.5", initial_vehicle_ratings)
+    # initial_vehicle_ratings = solve_and_save("./dataset/simple/TW60.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW60-TPD1.0", initial_vehicle_ratings)
     initial_vehicle_ratings = solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 0.5, 10, 20, 1e6, 3600, "VRPSTW6-TPD0.5", initial_vehicle_ratings)
     initial_vehicle_ratings = solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 1.0, 10, 20, 1e6, 3600, "VRPSTW6-TPD1.0", initial_vehicle_ratings)
 
