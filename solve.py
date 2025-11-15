@@ -69,6 +69,9 @@ def solve_and_save(xmlpath: str, cpd: float, tpd: float, early_weight: float, la
             if late_dev_per_vehicle[k] > 0:
                 updated_vehicle_ratings[k] = max(1.0, updated_vehicle_ratings[k] - 0.1) # Ensure rating doesn\'t go below 1
                 print(f"  Vehicle {k} was late. Old rating: {vehicle_ratings[k]:.1f}, New rating: {updated_vehicle_ratings[k]:.1f}")
+            else:
+                updated_vehicle_ratings[k] = min(5.0, updated_vehicle_ratings[k] + 0.05) # Reward on-time vehicles, max rating 5
+                print(f"  Vehicle {k} was on time. Old rating: {vehicle_ratings[k]:.1f}, New rating: {updated_vehicle_ratings[k]:.1f}")
         return updated_vehicle_ratings
     return vehicle_ratings # Return original ratings if not feasible
 
@@ -116,14 +119,14 @@ def solve_solomon(setname: str, cpd: float, tpd: float, early_weight: float, lat
 def solve_simple_test():
 
     # Dynamically determine vehicle quantity and initialize ratings
-    _, _, _, _, v_quant_dummy, _ = load_dataset("./dataset/simple/TW10.xml") # Use one of the simple datasets to get v_quant
+    _, _, _, _, v_quant_dummy, _ = load_dataset("./dataset/simple/VRPSTW_6nodes.xml") # Use one of the simple datasets to get v_quant
     initial_vehicle_ratings = np.full(v_quant_dummy, 3.0) # Initialize all vehicles to rating 3.0
 
     # initial_vehicle_ratings = solve_and_save("./dataset/simple/TW10.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW10-TPD0.5", initial_vehicle_ratings)
     # initial_vehicle_ratings = solve_and_save("./dataset/simple/TW10.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW10-TPD1.0", initial_vehicle_ratings)
     # initial_vehicle_ratings = solve_and_save("./dataset/simple/TW60.xml", 1, 0.5, 10, 20, 1e6, 3600, "TW60-TPD0.5", initial_vehicle_ratings)
     # initial_vehicle_ratings = solve_and_save("./dataset/simple/TW60.xml", 1, 1.0, 10, 20, 1e6, 3600, "TW60-TPD1.0", initial_vehicle_ratings)
-    initial_vehicle_ratings = solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 0.5, 10, 20, 1e6, 3600, "VRPSTW6-TPD0.5", initial_vehicle_ratings)
+    initial_vehicle_ratings = solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 1.5, 10, 20, 1e6, 3600, "VRPSTW6-TPD1.5", initial_vehicle_ratings)
     initial_vehicle_ratings = solve_and_save("./dataset/simple/VRPSTW_6nodes.xml", 1, 1.0, 10, 20, 1e6, 3600, "VRPSTW6-TPD1.0", initial_vehicle_ratings)
 
 

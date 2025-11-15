@@ -35,10 +35,10 @@
         <decimals>0</decimals>
     </network>
     <fleet>
-        <vehicle_profile type="0" number="1">
+        <vehicle_profile type="0" number="5">
             <departure_node>0</departure_node>
             <arrival_node>0</arrival_node>
-            <capacity>200.0</capacity>
+            <capacity>50.0</capacity>
             <max_travel_time>1236.0</max_travel_time>
         </vehicle_profile>
     </fleet>
