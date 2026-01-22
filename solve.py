@@ -133,7 +133,7 @@ def solve_simple_test():
 if __name__ == "__main__":
 
     solve_simple_test()
-    # solve_solomon("c1", 1, 1, 10, 20, 1e6, 3600, 1, 9)
+    solve_solomon("c1", 1, 1, 10, 20, 1e6, 3600, 1, 9)
     # solve_solomon("c2", 1, 1, 10, 20, 1e6, 3600, 1, 8)
     # solve_solomon("r1", 1, 1, 10, 20, 1e6, 3600, 1, 12)
     # solve_solomon("r2", 1, 1, 10, 20, 1e6, 3600, 1, 11)

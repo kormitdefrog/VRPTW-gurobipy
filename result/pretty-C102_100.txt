@@ -7,4 +7,4 @@ cost per distance: 1
 time per distance: 1
 ====================================================================================
 feasible: False
-solver runtime: 3600.4219999313354
+solver runtime: 3600.441999912262

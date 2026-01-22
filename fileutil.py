@@ -83,7 +83,7 @@ def save_raw_result(
 
     if(not os.path.exists("./result")):
         os.mkdir("result")
-    f = open("./result/raw-" + name + ".txt", "w")
+    f = open("./result/raw/raw-" + name + ".txt", "w")
     print(name, file=f)
     print(is_feasible, file=f)
     print(objective_value, file=f)
