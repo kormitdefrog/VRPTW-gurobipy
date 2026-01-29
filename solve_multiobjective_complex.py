@@ -14,7 +14,8 @@ def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tl
     early_penalty_weight = np.zeros(node_quantity)
     late_penalty_weight = np.zeros(node_quantity)
     
-    vehicle_ratings = np.full(v_quant, 3.0)
+    # Initialize vehicle ratings
+    vehicle_ratings = np.random.randint(1, 6, size=v_quant).astype(float)
     
     print(f"\n--- Running {method} method for {name_prefix} ---")
     if method == 'blended':
@@ -44,6 +45,40 @@ def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tl
         print(f"  Total Distance: {total_dist:.2f}")
         print(f"  Total Lateness: {total_lateness:.2f}")
         print(f"  Primary Obj: {obj:.2f}")
+
+        # Update vehicle ratings
+        new_vehicle_ratings = vehicle_ratings.copy()
+        for k in range(v_quant):
+            # Find nodes visited by vehicle k (excluding depot start/end)
+            visited_nodes = []
+            for i in range(1, node_quantity - 1):
+                if np.any(arc[k, i, :]) or np.any(arc[k, :, i]):
+                    visited_nodes.append(i)
+        
+        # Sort visited nodes by arrival time to process them in order
+            visited_nodes.sort(key=lambda n: time[n, k])
+            
+            # Track sum and count for cumulative average
+            # Start with the initial rating
+            rating_sum = vehicle_ratings[k]
+            rating_count = 1
+            
+            for node in visited_nodes:
+                is_late = late_dev[node] > 1e-4
+                if is_late:
+                    # Late: random rating 1-3
+                    new_val = np.random.randint(1, 4)
+                else:
+                    # Not late: random rating 4-5
+                    new_val = np.random.randint(4, 6)
+                
+                rating_sum += new_val
+                rating_count += 1
+                # Update the current average for this vehicle
+                new_vehicle_ratings[k] = rating_sum / rating_count
+        
+        print(f"Updated Vehicle Ratings: {np.round(new_vehicle_ratings, 2)}")
+
         return total_dist, total_lateness
     else:
         print(f"Optimization failed.")
@@ -62,7 +97,7 @@ if __name__ == "__main__":
 
         label = f"Blended ({w_dist:.1f}/{w_late:.1f})"
 
-        d, l = run_multiobjective_test(test_file, "RC101", "blended", weights=[w_dist, w_late], tlimit=20)
+        d, l = run_multiobjective_test(test_file, "RC101", "blended", weights=[w_dist, w_late], tlimit=600)
 
         results.append((label, d, l))
         print(f"Finished: {label} -> Dist: {d}, Late: {l}")
@@ -81,7 +116,7 @@ if __name__ == "__main__":
     
     # 4. Hierarchical - Distance first
     print("\n--- Hierarchical: Distance Priority ---")
-    d, l = run_multiobjective_test(test_file, "RC101", "hierarchical", tlimit=60)
+    d, l = run_multiobjective_test(test_file, "RC101", "hierarchical", tlimit=600)
     results.append(("Hierarchical (Dist First)", d, l))
 
     print("\n" + "="*30)
