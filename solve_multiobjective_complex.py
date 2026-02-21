@@ -5,7 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tlimit=60):
+tlimit = 600  # Time limit for optimization in seconds
+def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tlimit=tlimit):
     coord, tw, d, service_dur, v_quant, v_cap = load_dataset(xmlpath)
     node_quantity = coord.shape[0]
     customer_quantity = node_quantity - 2
@@ -14,8 +15,9 @@ def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tl
     early_penalty_weight = np.zeros(node_quantity)
     late_penalty_weight = np.zeros(node_quantity)
     
-    # Initialize vehicle ratings
+    # Initialize vehicle ratings with random integers ranging from 1 to 5
     vehicle_ratings = np.random.randint(1, 6, size=v_quant).astype(float)
+    print(f"Initial Vehicle Ratings: {vehicle_ratings}")
     
     print(f"\n--- Running {method} method for {name_prefix} ---")
     if method == 'blended':
@@ -37,7 +39,7 @@ def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tl
         os.makedirs("./result/fig", exist_ok=True)
         
         save_raw_result(name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, 1.0, 1.0, runtime, gap)
-        plot_solution(name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, 1.0, 1.0, runtime, gap, False)
+        # plot_solution is now called inside the rating update block to include rating_history
         total_dist = np.sum([arc[k, i, j] * np.hypot(coord[i, 0] - coord[j, 0], coord[i, 1] - coord[j, 1]) for k in range(v_quant) for i in range(node_quantity) for j in range(node_quantity)])
         total_lateness = np.sum(late_dev)
         
@@ -46,20 +48,25 @@ def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tl
         print(f"  Total Lateness: {total_lateness:.2f}")
         print(f"  Primary Obj: {obj:.2f}")
 
-        # Update vehicle ratings
+        # Update vehicle ratings after each node based on lateness
+        # The rating is the cumulative average of all ratings (initial + one per node)
         new_vehicle_ratings = vehicle_ratings.copy()
+        rating_history = [] # List of (vehicle_id, time, rating)
+        
         for k in range(v_quant):
+            # Initial rating at time 0
+            rating_history.append((k, 0.0, vehicle_ratings[k]))
+            
             # Find nodes visited by vehicle k (excluding depot start/end)
             visited_nodes = []
             for i in range(1, node_quantity - 1):
                 if np.any(arc[k, i, :]) or np.any(arc[k, :, i]):
                     visited_nodes.append(i)
-        
-        # Sort visited nodes by arrival time to process them in order
+            
+            # Sort visited nodes by arrival time to process them in order
             visited_nodes.sort(key=lambda n: time[n, k])
             
             # Track sum and count for cumulative average
-            # Start with the initial rating
             rating_sum = vehicle_ratings[k]
             rating_count = 1
             
@@ -74,19 +81,26 @@ def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tl
                 
                 rating_sum += new_val
                 rating_count += 1
-                # Update the current average for this vehicle
-                new_vehicle_ratings[k] = rating_sum / rating_count
+                current_avg = rating_sum / rating_count
+                new_vehicle_ratings[k] = current_avg
+                
+                # Record rating after service completion at this node
+                # time[node, k] is arrival time, service_dur[node] is service duration
+                rating_history.append((k, time[node, k] + service_dur[node], current_avg))
         
         print(f"Updated Vehicle Ratings: {np.round(new_vehicle_ratings, 2)}")
-
+        
+        # Pass rating_history to plot_solution
+        # We need to modify plot_solution signature in visual.py first or use a workaround
+        # For now, let's assume we modify visual.py to accept it
+        plot_solution(name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, 1.0, 1.0, runtime, gap, False, rating_history=rating_history)
+        
         return total_dist, total_lateness
     else:
         print(f"Optimization failed.")
         return None, None
 
 if __name__ == "__main__":
-    # Using a slightly larger Solomon instance to see trade-offs
-    # RC101_025 has 25 customers, more likely to have trade-offs than 6 nodes
     test_file = "./dataset/solomon-1987-rc1/RC101_025.xml"
     
     results = []
@@ -97,26 +111,14 @@ if __name__ == "__main__":
 
         label = f"Blended ({w_dist:.1f}/{w_late:.1f})"
 
-        d, l = run_multiobjective_test(test_file, "RC101", "blended", weights=[w_dist, w_late], tlimit=600)
+        d, l = run_multiobjective_test(test_file, "RC101", "blended", weights=[w_dist, w_late], tlimit=tlimit)
 
         results.append((label, d, l))
         print(f"Finished: {label} -> Dist: {d}, Late: {l}")
 
-    # # 1. Blended - Focus on Distance
-    # d, l = run_multiobjective_test(test_file, "RC101", "blended", weights=[0.7, 0.3], tlimit=30)
-    # results.append(("Blended (Dist Focus)", d, l))
-    
-    # # 2. Blended - Balanced
-    # d, l = run_multiobjective_test(test_file, "RC101", "blended", weights=[0.5, 0.5], tlimit=30)
-    # results.append(("Blended (Balanced)", d, l))
-    
-    # # 3. Blended - Focus on Lateness
-    # d, l = run_multiobjective_test(test_file, "RC101", "blended", weights=[0.3, 0.7], tlimit=30)
-    # results.append(("Blended (Late Focus)", d, l))
-    
     # 4. Hierarchical - Distance first
     print("\n--- Hierarchical: Distance Priority ---")
-    d, l = run_multiobjective_test(test_file, "RC101", "hierarchical", tlimit=600)
+    d, l = run_multiobjective_test(test_file, "RC101", "hierarchical", tlimit=tlimit)
     results.append(("Hierarchical (Dist First)", d, l))
 
     print("\n" + "="*30)

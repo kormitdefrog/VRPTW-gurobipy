@@ -22,7 +22,8 @@ def plot_solution(
     time_per_distance: float,
     solver_runtime: float,
     mip_gap: float,
-    show_plot: bool
+    show_plot: bool,
+    rating_history: list = None
 ):
     """
     if the problem is feasible, plot all the results
@@ -109,9 +110,15 @@ def plot_solution(
                 plt.subplot(1, 3, 2)
                 plt.plot(t, node, label="vehicle " + str(k), marker=M[k // 10])
                 plt.legend(loc="upper right")
-                plt.subplot(1, 3, 3)
-                plt.plot(t, cargo, label="vehicle " + str(k), marker=M[k // 10])
-                plt.legend(loc="upper right")
+                if rating_history is not None:
+                    plt.subplot(1, 3, 3)
+                    v_history = [h for h in rating_history if h[0] == k]
+                    if v_history:
+                        v_history.sort(key=lambda x: x[1])
+                        times = [h[1] for h in v_history]
+                        ratings = [h[2] for h in v_history]
+                        plt.step(times, ratings, where='post', label="vehicle " + str(k), marker=M[k // 10])
+                        plt.legend(loc="upper right")
 
         plt.subplot(1, 3, 1)
         plt.legend(loc="upper right")
@@ -154,8 +161,9 @@ def plot_solution(
     plt.subplot(1, 3, 3)
     plt.grid(True)
     plt.xlabel("t", fontsize=16)
-    plt.ylabel("Cargo", fontsize=16)
-    plt.title("Cargo - Time", fontsize=16)
+    plt.ylabel("Rating", fontsize=16)
+    plt.title("Rating - Time", fontsize=16)
+    plt.ylim(0.5, 5.5)
 
     plt.tight_layout()
 
