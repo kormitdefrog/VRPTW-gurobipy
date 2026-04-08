@@ -88,7 +88,7 @@ def solve_VRPTW_multiobjective(
     else:
         raise ValueError("Method must be 'blended' or 'hierarchical'")
 
-    # Constraints (same as original)
+    # Constraints (same as ori)
     model.addConstrs((quicksum(x[i, j, k] for j in N for k in V) == 1 for i in C), name="visit_once")
     model.addConstrs((quicksum(x[0, j, k] for j in N) == 1 for k in V), name="start_depot")
     model.addConstrs((quicksum(x[i, customer_quantity + 1, k] for i in N) == 1 for k in V), name="end_depot")
@@ -112,12 +112,16 @@ def solve_VRPTW_multiobjective(
     model.Params.Timelimit = timelimit
     model.optimize()
 
-    is_feasible = model.Status == GRB.OPTIMAL or model.Status == GRB.TIME_LIMIT
-    if not is_feasible:
+    # Check if a solution was found
+    if model.SolCount == 0:
+        print(f"No solution found. Status: {model.Status}")
         return False, 0, None, None, None, None, None, model.Runtime, 0
 
+    is_feasible = True
     # obtain the results
-    obj = model.getObjective(0).getValue() # Primary objective value
+    # For multi-objective models di gurobi, we should use the ObjNVal attribute for each objective
+    model.setParam(GRB.Param.ObjNumber, 0)
+    obj = model.ObjNVal # Primary objective value (Distance_Cost)
     runtime = model.Runtime
     mip_gap = getattr(model, "MIPGap", 0)
     

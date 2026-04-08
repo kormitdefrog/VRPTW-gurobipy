@@ -41,7 +41,8 @@ def plot_solution(
 
     
     px = 1/plt.rcParams['figure.dpi']
-    plt.figure(title, figsize=(2700/1.75*px, 900/1.75*px))
+    # Adjusted figsize for 2 subplots
+    plt.figure(title, figsize=(1800/1.75*px, 900/1.75*px))
     plt.rcParams["font.family"] = "Times New Roman"
     M = ["o", "s", "D", "P", "X", "^", "v"]
 
@@ -86,7 +87,7 @@ def plot_solution(
             x = coordinate_reordered[k][:, 0]
             y = coordinate_reordered[k][:, 1]
             if(x.shape[0] > 2):
-                plt.subplot(1, 3, 1)
+                plt.subplot(1, 2, 1)
                 plt.plot(x, y, label="vehicle " + str(k), marker=M[k // 10])
 
         for k in V:
@@ -103,15 +104,10 @@ def plot_solution(
 
             chrono_info[k][-1, :] = np.array([arrival_time_reordered[k][-1], 0, 0, coordinate_reordered[k][0, 0], coordinate_reordered[k][0, 1]])
 
-            t = chrono_info[k][:, 0]
-            node = chrono_info[k][:, 1]
-            cargo = chrono_info[k][:, 2]
-            if(t.shape[0] > 2):
-                plt.subplot(1, 3, 2)
-                plt.plot(t, node, label="vehicle " + str(k), marker=M[k // 10])
-                plt.legend(loc="upper right")
-                if rating_history is not None:
-                    plt.subplot(1, 3, 3)
+            if rating_history is not None:
+                # Only plot rating history if the vehicle was actually used (visited more than just depot)
+                if node_sequence[k].shape[0] > 2:
+                    plt.subplot(1, 2, 2)
                     v_history = [h for h in rating_history if h[0] == k]
                     if v_history:
                         v_history.sort(key=lambda x: x[1])
@@ -120,14 +116,14 @@ def plot_solution(
                         plt.step(times, ratings, where='post', label="vehicle " + str(k), marker=M[k // 10])
                         plt.legend(loc="upper right")
 
-        plt.subplot(1, 3, 1)
+        plt.subplot(1, 2, 1)
         plt.legend(loc="upper right")
 
     else:
 
         x = coordinate[:, 0]
         y = coordinate[:, 1]
-        plt.subplot(1, 3, 1)
+        plt.subplot(1, 2, 1)
         plt.plot(x, y, "o")
 
     pretty_print(
@@ -145,20 +141,18 @@ def plot_solution(
     )
 
 
-    plt.subplot(1, 3, 1)
+    plt.subplot(1, 2, 1)
+    # Add labels for each node
+    for i in range(node_quantity):
+        plt.text(coordinate[i, 0] + 0.5, coordinate[i, 1] + 0.5, str(i), fontsize=10, fontweight='bold')
+    
     plt.plot(coordinate[0, 0], coordinate[0, 1], marker="o", color='0.5', markersize=10)
     plt.grid(True)
     plt.xlabel("X", fontsize=16)
     plt.ylabel("Y", fontsize=16)
     plt.title("Activated Arcs", fontsize=16)
 
-    plt.subplot(1, 3, 2)
-    plt.grid(True)
-    plt.xlabel("t", fontsize=16)
-    plt.ylabel("Node", fontsize=16)
-    plt.title("Node - Time", fontsize=16)
-
-    plt.subplot(1, 3, 3)
+    plt.subplot(1, 2, 2)
     plt.grid(True)
     plt.xlabel("t", fontsize=16)
     plt.ylabel("Rating", fontsize=16)

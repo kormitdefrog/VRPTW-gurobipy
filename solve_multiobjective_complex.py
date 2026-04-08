@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-tlimit = 600  # Time limit for optimization in seconds
+tlimit = 900  # Time limit for optimization in seconds
 def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tlimit=tlimit):
     coord, tw, d, service_dur, v_quant, v_cap = load_dataset(xmlpath)
     node_quantity = coord.shape[0]
@@ -91,8 +91,8 @@ def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tl
         print(f"Updated Vehicle Ratings: {np.round(new_vehicle_ratings, 2)}")
         
         # Pass rating_history to plot_solution
-        # We need to modify plot_solution signature in visual.py first or use a workaround
-        # For now, let's assume we modify visual.py to accept it
+        # Note to self cad, We need to modify plot_solution signature in visual.py first or use a workaround
+        # For now, let's assume we modify visual.py to accept it HAHAHAH
         plot_solution(name, is_feasible, obj, arc, time, coord, tw, d, service_dur, v_quant, v_cap, 1.0, 1.0, runtime, gap, False, rating_history=rating_history)
         
         return total_dist, total_lateness
@@ -101,7 +101,7 @@ def run_multiobjective_test(xmlpath, name_prefix, method, weights=[1.0, 1.0], tl
         return None, None
 
 if __name__ == "__main__":
-    test_file = "./dataset/solomon-1987-rc1/RC101_025.xml"
+    test_file, name_prefix = "./dataset/solomon-1987-c1/C101_025.xml","C101_025"
     
     results = []
     
@@ -111,18 +111,18 @@ if __name__ == "__main__":
 
         label = f"Blended ({w_dist:.1f}/{w_late:.1f})"
 
-        d, l = run_multiobjective_test(test_file, "RC101", "blended", weights=[w_dist, w_late], tlimit=tlimit)
+        d, l = run_multiobjective_test(test_file, name_prefix, "blended", weights=[w_dist, w_late], tlimit=tlimit)
 
         results.append((label, d, l))
         print(f"Finished: {label} -> Dist: {d}, Late: {l}")
 
-    # 4. Hierarchical - Distance first
-    print("\n--- Hierarchical: Distance Priority ---")
-    d, l = run_multiobjective_test(test_file, "RC101", "hierarchical", tlimit=tlimit)
+    # Hierarchical - Distance first
+    print(f"\n--- Hierarchical: Distance Priority for {name_prefix}---")
+    d, l = run_multiobjective_test(test_file, name_prefix, "hierarchical", tlimit=tlimit)
     results.append(("Hierarchical (Dist First)", d, l))
 
     print("\n" + "="*30)
-    print("SUMMARY OF TRADE-OFFS")
+    print(f"SUMMARY OF TRADE-OFFS for {name_prefix}")
     print(f"{'Method':<25} | {'Distance':<10} | {'Lateness':<10} | {'Total Cost': <10}")
     print("-" * 50)
     for name, d, l in results:
@@ -161,12 +161,14 @@ if __name__ == "__main__":
             plt.scatter(h_dists, h_lates, color='red', marker='*', s=200, label='Hierarchical')
 
         # C. Labels and Formatting
-        plt.title('Pareto Frontier: Distance vs Lateness')
+        plt.title(f'Pareto Frontier: Distance vs Lateness ({name_prefix})')
         plt.xlabel('Distance (Minimize)')
         plt.ylabel('Lateness (Minimize)')
         plt.legend()
         plt.grid(True, linestyle=':', alpha=0.6)
         plt.tight_layout()
 
-        plt.savefig("pareto_frontier_results.png", dpi=300)
-        print("\nPlot saved to 'pareto_frontier_results.png'")
+        plot_filename = f"pareto_frontier_{name_prefix}.png"
+        plt.savefig(plot_filename, dpi=300)
+        print(f"\nPlot saved to '{plot_filename}'")
+        plt.close()
